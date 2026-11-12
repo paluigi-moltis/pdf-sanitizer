@@ -40,6 +40,26 @@ pub struct Sanitizer {
     options: SanitizeOptions,
 }
 
+/// A rendered page bitmap retained for the caller (PWA overlay rendering).
+#[derive(Debug, Clone)]
+pub struct PageImage {
+    /// 1-based page number.
+    pub page_number: usize,
+    pub width: u32,
+    pub height: u32,
+    /// RGBA, row-major, 4 bytes per pixel.
+    pub rgba: Vec<u8>,
+}
+
+/// Full sanitize output: the audit report plus (optionally) the rendered
+/// page bitmaps, so callers can draw bbox overlays (the report itself never
+/// embeds images).
+#[derive(Debug, Clone)]
+pub struct SanitizeOutput {
+    pub report: Report,
+    pub page_images: Vec<PageImage>,
+}
+
 impl Sanitizer {
     pub fn new(models: OcrModels, options: SanitizeOptions) -> Result<Self> {
         let engine = path_b::build_engine(models)?;
@@ -48,6 +68,20 @@ impl Sanitizer {
 
     /// Sanitize a document from raw bytes and produce the audit report.
     pub fn sanitize(&self, filename: &str, bytes: &[u8]) -> Result<Report> {
+        self.sanitize_with_progress(filename, bytes, &mut |_, _| {})
+            .map(|out| out.report)
+    }
+
+    /// Sanitize a document, invoking `progress(done_pages, total_pages)`
+    /// after each processed page and returning the rendered page bitmaps
+    /// when `keep_page_images` is enabled. Pages are streamed one at a time
+    /// so memory stays bounded (important in WebAssembly).
+    pub fn sanitize_with_progress(
+        &self,
+        filename: &str,
+        bytes: &[u8],
+        progress: &mut dyn FnMut(usize, usize),
+    ) -> Result<SanitizeOutput> {
         let raw: RawDocument = path_a::extract_document(bytes)?;
 
         let page_count = raw.pages.len();
@@ -61,6 +95,7 @@ impl Sanitizer {
 
         let mut findings: Vec<Finding> = Vec::new();
         let mut visual_pages: Vec<VisualPage> = Vec::with_capacity(page_count);
+        let mut page_images: Vec<PageImage> = Vec::new();
 
         for page_extract in &raw.pages {
             let page_number = page_extract.page_number;
@@ -77,6 +112,17 @@ impl Sanitizer {
                     None
                 },
             });
+            if self.options.keep_page_images {
+                let last = visual_pages.last().expect("page just pushed");
+                if let Some(r) = &last.rasterized {
+                    page_images.push(PageImage {
+                        page_number,
+                        width: r.width,
+                        height: r.height,
+                        rgba: r.rgba.clone(),
+                    });
+                }
+            }
 
             let ocr_text: String = visual_pages
                 .last()
@@ -94,6 +140,8 @@ impl Sanitizer {
             for span in &page_extract.spans {
                 self.judge_span(span, &ocr_tokens, page_number, &mut findings);
             }
+
+            progress(page_number, page_count);
         }
 
         // ---- Non-body surfaces ----
@@ -136,19 +184,22 @@ impl Sanitizer {
 
         let risk_level = Report::risk_level(&findings).to_string();
 
-        Ok(Report {
-            document: DocumentSummary {
-                filename: filename.to_string(),
-                page_count,
-                risk_level,
-                summary: crate::report::Summary {
-                    total_findings: findings.len(),
-                    hidden_text_removed: hidden_removed,
-                    metadata_or_links_stripped: meta_stripped,
+        Ok(SanitizeOutput {
+            report: Report {
+                document: DocumentSummary {
+                    filename: filename.to_string(),
+                    page_count,
+                    risk_level,
+                    summary: crate::report::Summary {
+                        total_findings: findings.len(),
+                        hidden_text_removed: hidden_removed,
+                        metadata_or_links_stripped: meta_stripped,
+                    },
                 },
+                findings,
+                sanitized_markdown: markdown,
             },
-            findings,
-            sanitized_markdown: markdown,
+            page_images,
         })
     }
 

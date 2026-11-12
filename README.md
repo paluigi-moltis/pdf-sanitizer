@@ -111,9 +111,12 @@ absent.
 - **M2 (done)** — `python/` maturin package: `sanitize_pdf(bytes)` (in-process
   PyO3) and `sanitize_pdf_isolated(path, timeout_sec=30)` (bundled CLI
   subprocess with hard timeout); duck-compatible result objects; pytest suite.
-- **M3** — `crates/wasm` + `pwa/`: drag-drop offline PWA, Web-Worker
-  execution, split-pane report viewer with bbox overlays, Workbox-cached
-  `.wasm`/`.rten`.
+- **M3 (done)** — `crates/wasm` (wasm-bindgen engine with page-by-page
+  progress callbacks + synth demos) and `pwa/`: offline-first Vite + TS +
+  Tailwind PWA running everything in a Web Worker, split-pane report viewer
+  with color-coded bbox overlays, clickable finding cards, sanitized
+  Markdown tab (copy/download), Workbox-precached `.wasm` + OCR models —
+  verified to scan fully offline.
 
 > Note: CI runs only on manual dispatch (`workflow_dispatch`) and published
 > releases, to stay inside the GitHub-hosted Actions minutes quota. Run

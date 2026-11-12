@@ -1,0 +1,22 @@
+[package]
+name = "pdfsan-wasm"
+description = "WebAssembly bindings for pdfsan-core (Web Worker execution)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pdfsan-core = { path = "../core", default-features = false }
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+serde-wasm-bindgen = "0.6"
+rten = "0.28"
+# rten -> rand -> getrandom: wasm32-unknown-unknown needs the JS backend.
+getrandom = { version = "0.4", features = ["wasm_js"] }
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = true

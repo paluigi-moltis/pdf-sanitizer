@@ -9,3 +9,8 @@ dist/
 python/python/pdf_sanitizer/bin/
 python/python/pdf_sanitizer/models/
 python/python/pdf_sanitizer/*.so
+pwa/src/wasm/
+pwa/public/models/
+pwa/node_modules/
+pwa/dist/
+pwa/package-lock.json.bak

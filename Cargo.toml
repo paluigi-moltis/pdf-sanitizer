@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/cli", "python"]
-# `crates/wasm` (Milestone 3) and `pwa/` (M3) are added later.
+members = ["crates/core", "crates/cli", "python", "crates/wasm"]
+# `pwa/` (Milestone 3 frontend) is plain JS/TS, not a workspace member.
 
 [workspace.package]
 version = "0.1.0"
