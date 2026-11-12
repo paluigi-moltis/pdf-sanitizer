@@ -16,21 +16,29 @@ fn main() {
             .bold()
             .build(),
     );
-    benign.push_text(TextBuilder::new(
-        72.0,
-        640.0,
-        14.0,
-        "Revenue grew twelve percent year over year.",
+    benign.push_text(
+        TextBuilder::new(
+            72.0,
+            640.0,
+            14.0,
+            "Revenue grew twelve percent year over year.",
+        )
+        .build(),
+    );
+    benign.push_text(
+        TextBuilder::new(
+            72.0,
+            610.0,
+            14.0,
+            "Operating expenses remained flat during the period.",
+        )
+        .build(),
+    );
+    std::fs::write(
+        format!("{out}/benign.pdf"),
+        SynthDoc::new().page(benign).finish(),
     )
-    .build());
-    benign.push_text(TextBuilder::new(
-        72.0,
-        610.0,
-        14.0,
-        "Operating expenses remained flat during the period.",
-    )
-    .build());
-    std::fs::write(format!("{out}/benign.pdf"), SynthDoc::new().page(benign).finish()).unwrap();
+    .unwrap();
 
     // Hostile document: every stealth technique at once.
     let mut evil = SynthPage::letter();
@@ -50,7 +58,9 @@ fn main() {
         )
         .build(),
     );
-    evil.push_text(TextBuilder::new(72.0, -80.0, 12.0, "hidden off canvas instruction block").build());
+    evil.push_text(
+        TextBuilder::new(72.0, -80.0, 12.0, "hidden off canvas instruction block").build(),
+    );
     evil.push_text(TextBuilder::new(72.0, 400.0, 0.5, "tiny secret directives").build());
     evil.push_text(
         TextBuilder::with_options(
