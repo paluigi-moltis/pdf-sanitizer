@@ -1,0 +1,28 @@
+[package]
+name = "pdfsan-core"
+description = "Offline PDF prompt-injection detector & WYSIWYG sanitizer engine (dual-path diff: raw structure vs rasterized OCR)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+# Download of .rten OCR models from the ocrs-models bucket (one-time bootstrap;
+# all document processing itself stays 100% offline). Enabled by the CLI.
+default = []
+download = ["dep:ureq"]
+
+[dependencies]
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+lopdf.workspace = true
+hayro.workspace = true
+ocrs.workspace = true
+rten.workspace = true
+ureq = { workspace = true, optional = true }
+
+[dev-dependencies]
+png = "0.17"
+serde_json.workspace = true

@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache OCR models
+        id: models
+        uses: actions/cache@v4
+        with:
+          path: tests/fixtures/models
+          key: ocrs-models-v1
+
+      - name: Download OCR models
+        if: steps.models.outputs.cache-hit != 'true'
+        run: ./scripts/download-models.sh tests/fixtures/models
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test
+        env:
+          PDF_SANITIZER_MODELS_DIR: ${{ github.workspace }}/tests/fixtures/models
+        run: cargo test --workspace
