@@ -1,15 +1,18 @@
 name: CI
 
+# Runs only on manual dispatch and published releases to conserve the
+# GitHub-hosted Actions minutes quota. Ordinary pushes are not tested on
+# GitHub; run `cargo test --workspace` and `python/` pytest locally.
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
+  release:
+    types: [published]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
+  rust:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,3 +52,51 @@ jobs:
         env:
           PDF_SANITIZER_MODELS_DIR: ${{ github.workspace }}/tests/fixtures/models
         run: cargo test --workspace
+
+  python:
+    runs-on: ubuntu-latest
+    needs: rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache OCR models
+        id: models
+        uses: actions/cache@v4
+        with:
+          path: tests/fixtures/models
+          key: ocrs-models-v1
+
+      - name: Download OCR models
+        if: steps.models.outputs.cache-hit != 'true'
+        run: ./scripts/download-models.sh tests/fixtures/models
+
+      - name: Build extension + CLI
+        run: |
+          cd python
+          uv venv
+          uv pip install maturin pytest
+          uv run maturin develop --release
+
+      - name: Test
+        env:
+          PDF_SANITIZER_MODELS_DIR: ${{ github.workspace }}/tests/fixtures/models
+        run: |
+          cd python
+          uv run pytest -v

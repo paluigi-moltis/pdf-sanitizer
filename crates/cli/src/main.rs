@@ -69,7 +69,7 @@ fn main() {
             fail_on_findings,
             no_download,
             dump_page_images,
-        } => run_scan(
+        } => match run_scan(
             &input,
             out_md.as_deref(),
             out_json.as_deref(),
@@ -78,9 +78,13 @@ fn main() {
             fail_on_findings,
             !no_download,
             dump_page_images.as_deref(),
-        )
-        .unwrap_or(2),
-        // 0 = ok, 1 = findings (only with --fail-on-findings), 2 = error
+        ) {
+            Ok(code) => code,
+            Err(e) => {
+                eprintln!("Error: {e:#}");
+                2
+            }
+        },
     };
     std::process::exit(code);
 }

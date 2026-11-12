@@ -107,13 +107,17 @@ absent.
 
 ### Roadmap
 
-- **M1 (done)** — core engine + CLI + integration tests (this repo state).
-- **M2** — `python/` maturin package: `sanitize_pdf(bytes) -> SanitizationResult`
-  (in-process PyO3) and `sanitize_pdf_isolated(path, timeout_sec=30)`
-  (bundled CLI subprocess).
+- **M1 (done)** — core engine + CLI + integration tests.
+- **M2 (done)** — `python/` maturin package: `sanitize_pdf(bytes)` (in-process
+  PyO3) and `sanitize_pdf_isolated(path, timeout_sec=30)` (bundled CLI
+  subprocess with hard timeout); duck-compatible result objects; pytest suite.
 - **M3** — `crates/wasm` + `pwa/`: drag-drop offline PWA, Web-Worker
   execution, split-pane report viewer with bbox overlays, Workbox-cached
   `.wasm`/`.rten`.
+
+> Note: CI runs only on manual dispatch (`workflow_dispatch`) and published
+> releases, to stay inside the GitHub-hosted Actions minutes quota. Run
+> `cargo test --workspace` and the `python/` pytest suite locally on push.
 
 ## Scope & honest limitations (v1)
 

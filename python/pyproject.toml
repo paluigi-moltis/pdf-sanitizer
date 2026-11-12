@@ -1,0 +1,30 @@
+[build-system]
+requires = ["maturin>=1.5,<2"]
+build-backend = "maturin"
+
+[project]
+name = "pdf-sanitizer"
+dynamic = ["version"]
+description = "Offline PDF prompt-injection detector & WYSIWYG sanitizer (100% local processing)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Luigi Palumbo" }]
+keywords = ["pdf", "security", "prompt-injection", "llm", "sanitizer"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Topic :: Text Processing :: Markup",
+]
+
+[project.urls]
+Repository = "https://github.com/paluigi-moltis/pdf-sanitizer"
+
+[tool.maturin]
+python-source = "python"
+module-name = "pdf_sanitizer"
+features = ["pyo3/extension-module"]

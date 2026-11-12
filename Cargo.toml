@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/cli"]
-# `crates/wasm` (Milestone 3), `python/` (M2) and `pwa/` (M3) are added later.
+members = ["crates/core", "crates/cli", "python"]
+# `crates/wasm` (Milestone 3) and `pwa/` (M3) are added later.
 
 [workspace.package]
 version = "0.1.0"

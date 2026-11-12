@@ -6,3 +6,6 @@ __pycache__/
 .venv/
 node_modules/
 dist/
+python/python/pdf_sanitizer/bin/
+python/python/pdf_sanitizer/models/
+python/python/pdf_sanitizer/*.so

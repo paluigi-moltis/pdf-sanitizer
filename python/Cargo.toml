@@ -1,0 +1,23 @@
+[package]
+name = "pdfsan-python"
+description = "Python bindings for pdfsan-core (offline PDF prompt-injection sanitizer)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "pdf_sanitizer"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["extension-module"]
+# Skip linking libpython for plain `cargo build/test` inside the workspace;
+# maturin enables this too when building wheels.
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+pdfsan-core = { path = "../crates/core", features = ["download"] }
+anyhow.workspace = true
+serde_json.workspace = true
+pyo3 = { version = "0.30", features = ["abi3-py39"] }
