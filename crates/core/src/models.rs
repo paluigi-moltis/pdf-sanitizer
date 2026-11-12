@@ -6,7 +6,7 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 
 pub const DETECTION_MODEL_RTEN: &str = "text-detection.rten";
 pub const RECOGNITION_MODEL_RTEN: &str = "text-recognition.rten";
@@ -21,7 +21,10 @@ pub fn default_models_dir() -> PathBuf {
     if let Ok(xdg) = std::env::var("XDG_CACHE_HOME") {
         PathBuf::from(xdg).join("pdf-sanitizer").join("models")
     } else if let Ok(home) = std::env::var("HOME") {
-        PathBuf::from(home).join(".cache").join("pdf-sanitizer").join("models")
+        PathBuf::from(home)
+            .join(".cache")
+            .join("pdf-sanitizer")
+            .join("models")
     } else {
         PathBuf::from(".cache").join("pdf-sanitizer").join("models")
     }
@@ -47,9 +50,7 @@ pub fn discover_models_dir() -> Option<PathBuf> {
     }
     candidates.push(default_models_dir());
 
-    candidates
-        .into_iter()
-        .find(|d| has_models(d))
+    candidates.into_iter().find(|d| has_models(d))
 }
 
 pub fn has_models(dir: &Path) -> bool {
@@ -96,6 +97,7 @@ pub fn load_models(dir: &Path, allow_download: bool) -> Result<crate::path_b::Oc
 /// One-time bootstrap download of the ocrs models (feature `download`).
 #[cfg(feature = "download")]
 pub fn download_models(dir: &Path) -> Result<()> {
+    use anyhow::Context as _;
     std::fs::create_dir_all(dir).context("creating models dir")?;
     download_file(
         &format!("{BASE_URL}/{DETECTION_MODEL_RTEN}"),
@@ -113,7 +115,13 @@ pub fn download_models(dir: &Path) -> Result<()> {
 }
 
 #[cfg(feature = "download")]
-fn download_file(primary: &str, primary_path: &Path, fallback: &str, fallback_path: &Path) -> Result<()> {
+fn download_file(
+    primary: &str,
+    primary_path: &Path,
+    fallback: &str,
+    fallback_path: &Path,
+) -> Result<()> {
+    use anyhow::Context as _;
     if primary_path.is_file() || fallback_path.is_file() {
         return Ok(());
     }
@@ -131,8 +139,11 @@ fn download_file(primary: &str, primary_path: &Path, fallback: &str, fallback_pa
 
 #[cfg(feature = "download")]
 fn fetch(url: &str) -> Result<Vec<u8>> {
+    use anyhow::Context as _;
     use std::io::Read;
-    let response = ureq::get(url).call().map_err(|e| anyhow!("GET {url}: {e}"))?;
+    let response = ureq::get(url)
+        .call()
+        .map_err(|e| anyhow!("GET {url}: {e}"))?;
     let mut bytes = Vec::new();
     response
         .into_reader()

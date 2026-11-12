@@ -96,8 +96,7 @@ fn run_scan(
     allow_download: bool,
     dump_page_images: Option<&Path>,
 ) -> Result<i32> {
-    let bytes = std::fs::read(input)
-        .with_context(|| format!("reading {}", input.display()))?;
+    let bytes = std::fs::read(input).with_context(|| format!("reading {}", input.display()))?;
 
     let models_dir = match models_dir {
         Some(dir) => dir.to_path_buf(),
@@ -172,7 +171,9 @@ fn print_summary(report: &Report, out_md: &Path, out_json: &Path) {
             "  [{}] {} {} p.{} {} — {} ({})",
             severity_tag(f.severity),
             f.id,
-            serde_json::to_string(&f.category).unwrap_or_default().trim_matches('"'),
+            serde_json::to_string(&f.category)
+                .unwrap_or_default()
+                .trim_matches('"'),
             f.location.page,
             f.location.surface.as_str(),
             f.reason,

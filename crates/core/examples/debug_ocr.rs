@@ -12,20 +12,24 @@ fn main() -> anyhow::Result<()> {
             .bold()
             .build(),
     );
-    page.push_text(TextBuilder::new(
-        72.0,
-        640.0,
-        14.0,
-        "Revenue grew twelve percent year over year.",
-    )
-    .build());
-    page.push_text(TextBuilder::new(
-        72.0,
-        610.0,
-        14.0,
-        "Operating expenses remained flat during the period.",
-    )
-    .build());
+    page.push_text(
+        TextBuilder::new(
+            72.0,
+            640.0,
+            14.0,
+            "Revenue grew twelve percent year over year.",
+        )
+        .build(),
+    );
+    page.push_text(
+        TextBuilder::new(
+            72.0,
+            610.0,
+            14.0,
+            "Operating expenses remained flat during the period.",
+        )
+        .build(),
+    );
     let bytes = SynthDoc::new().page(page).finish();
 
     let dir = models::discover_models_dir()
@@ -34,8 +38,7 @@ fn main() -> anyhow::Result<()> {
     let loaded = models::load_models(&dir, false)?;
     let engine = path_b::build_engine(loaded)?;
 
-    let pdf = hayro::hayro_syntax::Pdf::new(bytes)
-        .map_err(|e| anyhow::anyhow!("hayro: {e:?}"))?;
+    let pdf = hayro::hayro_syntax::Pdf::new(bytes).map_err(|e| anyhow::anyhow!("hayro: {e:?}"))?;
     let raster = path_b::rasterize_page(&pdf, 0, 150.0)?;
     println!("raster: {}x{}", raster.width, raster.height);
     std::fs::create_dir_all("/tmp/pdfsan")?;
@@ -48,12 +51,7 @@ fn main() -> anyhow::Result<()> {
         rasterized: None,
     };
     for l in &vpage.lines {
-        println!(
-            "h={:6.1} y={:6.1}  {:?}",
-            l.height_px,
-            l.bbox_px[1],
-            l.text
-        );
+        println!("h={:6.1} y={:6.1}  {:?}", l.height_px, l.bbox_px[1], l.text);
     }
     println!("--- markdown ---\n{}", path_b::build_markdown(&[vpage]));
     Ok(())

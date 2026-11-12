@@ -252,7 +252,10 @@ mod tests {
         let found = find_invisible_unicode(text);
         assert_eq!(found.len(), 3);
         assert!(matches!(found[0].1, '\u{200B}'));
-        assert_eq!(invisible_unicode_class('\u{202E}'), "bidi override character");
+        assert_eq!(
+            invisible_unicode_class('\u{202E}'),
+            "bidi override character"
+        );
         assert_eq!(
             invisible_unicode_class('\u{E0041}'),
             "Unicode tag character"
@@ -294,7 +297,7 @@ mod tests {
 
     #[test]
     fn token_coverage_fuzzy() {
-        let ocr = vec![
+        let ocr = [
             "quarterly".to_string(),
             "financial".to_string(),
             "rep ort".to_string(),

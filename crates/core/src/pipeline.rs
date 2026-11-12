@@ -8,11 +8,10 @@ use anyhow::{anyhow, Context, Result};
 
 use crate::path_a::{self, RawDocument, RawSpan};
 use crate::path_b::{
-    self, OcrModels, VisualPage, LOW_CONTRAST_DELTA, MIN_VISIBLE_FONT_PT,
-    MISSING_TOKEN_COVERAGE,
+    self, OcrModels, VisualPage, LOW_CONTRAST_DELTA, MIN_VISIBLE_FONT_PT, MISSING_TOKEN_COVERAGE,
 };
 use crate::report::{
-    Category, DocumentSummary, Finding, Location, Report, Severity, Surface, snippet_of,
+    snippet_of, Category, DocumentSummary, Finding, Location, Report, Severity, Surface,
 };
 use crate::rules::{self, RuleHit};
 
@@ -81,7 +80,13 @@ impl Sanitizer {
 
             let ocr_text: String = visual_pages
                 .last()
-                .map(|p| p.lines.iter().map(|l| l.text.clone()).collect::<Vec<_>>().join(" "))
+                .map(|p| {
+                    p.lines
+                        .iter()
+                        .map(|l| l.text.clone())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                })
                 .unwrap_or_default();
             let ocr_tokens = rules::normalize_tokens(&ocr_text);
 
@@ -157,7 +162,10 @@ impl Sanitizer {
         // Style-based stealth reasons.
         let mut reasons: Vec<String> = Vec::new();
         if span.font_size > 0.0 && span.font_size < MIN_VISIBLE_FONT_PT {
-            reasons.push(format!("font size {:.2}pt < {}pt", span.font_size, MIN_VISIBLE_FONT_PT));
+            reasons.push(format!(
+                "font size {:.2}pt < {}pt",
+                span.font_size, MIN_VISIBLE_FONT_PT
+            ));
         }
         if span.render_mode == 3 {
             reasons.push("text render mode 3 (invisible)".to_string());
@@ -189,8 +197,7 @@ impl Sanitizer {
             let mut all_reasons = reasons;
             if missing_from_visual {
                 all_reasons.push(
-                    "present in raw PDF stream but absent from the visual (OCR) render"
-                        .to_string(),
+                    "present in raw PDF stream but absent from the visual (OCR) render".to_string(),
                 );
             }
             let severity = if signature_hit.is_some() {
@@ -457,7 +464,10 @@ fn push_unicode_findings(text: &str, location: Location, findings: &mut Vec<Find
         action_taken: "stripped".to_string(),
         location,
         quarantined_snippet: Some(snippet_of(
-            &format!("{:?}", invisible.iter().map(|(_, c)| *c).collect::<Vec<char>>()),
+            &format!(
+                "{:?}",
+                invisible.iter().map(|(_, c)| *c).collect::<Vec<char>>()
+            ),
             120,
         )),
     });

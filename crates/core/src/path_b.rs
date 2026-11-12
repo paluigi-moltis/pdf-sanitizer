@@ -10,7 +10,7 @@ use anyhow::{anyhow, Context, Result};
 use hayro::hayro_interpret::InterpreterSettings;
 use hayro::hayro_syntax::Pdf;
 use hayro::vello_cpu::color::palette::css::WHITE;
-use hayro::{PixmapSettings, RenderCache, RenderSettings, render};
+use hayro::{render, PixmapSettings, RenderCache, RenderSettings};
 
 use ocrs::{ImageSource, OcrEngine, OcrEngineParams, TextItem, TextLine};
 use rten::Model;
@@ -152,7 +152,7 @@ pub fn ocr_page(engine: &OcrEngine, raster: &RasterizedPage) -> Result<Vec<OcrLi
 
 fn rgba_to_rgb(rgba: &[u8]) -> Vec<u8> {
     let mut rgb = Vec::with_capacity(rgba.len() / 4 * 3);
-    for px in rgba.chunks_exact(4) {
+    for px in rgba.as_chunks::<4>().0 {
         // vello_cpu pixmaps are premultiplied RGBA; on an opaque white
         // background un-premultiplying is a no-op for our purposes.
         rgb.extend_from_slice(&px[..3]);

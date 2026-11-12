@@ -372,8 +372,12 @@ impl SynthDoc {
         let kids: Vec<String> = page_ids.iter().map(|id| format!("{} 0 R", id)).collect();
         objects.insert(
             pages_id,
-            format!("<< /Type /Pages /Kids [{}] /Count {} >>", kids.join(" "), page_ids.len())
-                .into_bytes(),
+            format!(
+                "<< /Type /Pages /Kids [{}] /Count {} >>",
+                kids.join(" "),
+                page_ids.len()
+            )
+            .into_bytes(),
         );
 
         // ---- form field ----
