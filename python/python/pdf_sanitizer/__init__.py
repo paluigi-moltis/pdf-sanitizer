@@ -12,6 +12,7 @@ tool is the optional one-time OCR model download (see ``allow_download``).
 """
 
 from .isolated import sanitize_pdf_isolated
+from .isolated import _resolve_models_dir as _default_models_dir
 from .pdf_sanitizer import (
     SanitizationResult,
     synth_benign_pdf,
@@ -38,10 +39,13 @@ def sanitize_pdf(input, dpi: float = 150.0, models_dir=None, allow_download: boo
         input: PDF bytes or a path (``str`` / ``os.PathLike``).
         dpi: Rasterization DPI for the visual pass (default 150).
         models_dir: Optional directory holding the ocrs model files;
-            auto-discovered when omitted.
+            defaults to the wheel-bundled models when present, then the
+            usual discovery chain.
         allow_download: Download the OCR models on first use when missing.
 
     Returns:
         SanitizationResult
     """
+    if models_dir is None:
+        models_dir = _default_models_dir(None)
     return _sanitize_pdf(input, dpi=dpi, models_dir=models_dir, allow_download=allow_download)

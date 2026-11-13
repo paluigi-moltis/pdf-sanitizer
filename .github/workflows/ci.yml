@@ -1,12 +1,10 @@
 name: CI
 
-# Runs only on manual dispatch and published releases to conserve the
-# GitHub-hosted Actions minutes quota. Ordinary pushes are not tested on
-# GitHub; run `cargo test --workspace` and `python/` pytest locally.
+# Runs only on manual dispatch to conserve the GitHub-hosted Actions
+# minutes quota. Ordinary pushes are not tested on GitHub; run
+# `cargo test --workspace` and the `python/` pytest suite locally on push.
 on:
   workflow_dispatch:
-  release:
-    types: [published]
 
 env:
   CARGO_TERM_COLOR: always
