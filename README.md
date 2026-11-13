@@ -124,6 +124,15 @@ absent.
 
 ## Scope & honest limitations (v1)
 
+- **Real-world validation**: 15 arXiv papers (619 pages, pdfTeX + embedded
+  figure PDFs) produce 22 findings total, all benign: rotated arXiv
+  side-stamps (low `visual_mismatch`, genuinely unreadable by the Latin OCR
+  models), lone BOM artifacts in metadata, and one *visible* "jailbreak"
+  mention in the Llama-2 paper (flagged, not removed — by design). Hidden
+  false positives: zero, thanks to the visual-conjunction reconciliation
+  (a span is only "hidden" when styled suspicious AND OCR finds no text in
+  its bbox).
+
 - The content-stream interpreter handles simple fonts (incl. `/ToUnicode`);
   exotic encodings degrade to byte-level text and are still rule-scanned.
 - `cm` transforms are not applied to text matrices (the targeted stealth

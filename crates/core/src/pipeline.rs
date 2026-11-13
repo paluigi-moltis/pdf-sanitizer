@@ -138,7 +138,18 @@ impl Sanitizer {
 
             // ---- Reconciliation: every raw span of this page ----
             for span in &page_extract.spans {
-                self.judge_span(span, &ocr_tokens, page_number, &mut findings);
+                let ocr_lines_px: Vec<[f64; 4]> = visual_pages
+                    .last()
+                    .map(|p| p.lines.iter().map(|l| l.bbox_px).collect())
+                    .unwrap_or_default();
+                self.judge_span(
+                    span,
+                    &ocr_tokens,
+                    &ocr_lines_px,
+                    page_extract.media_box,
+                    page_number,
+                    &mut findings,
+                );
             }
 
             progress(page_number, page_count);
@@ -203,10 +214,13 @@ impl Sanitizer {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn judge_span(
         &self,
         span: &RawSpan,
         ocr_tokens: &[String],
+        ocr_lines_px: &[[f64; 4]],
+        media_box: [f64; 4],
         page_number: usize,
         findings: &mut Vec<Finding>,
     ) {
@@ -240,11 +254,34 @@ impl Sanitizer {
                 || h.category == Category::MarkdownImageExfiltration
         });
 
-        // Token reconciliation against the visual pass.
+        // Visual reconciliation: the span counts as *visible* only if its
+        // tokens were OCR-recognized AND recognized text sits inside the
+        // span's own bbox (page-level token matches alone can come from the
+        // same string printed elsewhere). This conjunction keeps style
+        // heuristics (tiny fonts in Type3 glyph tricks, contrast tracking
+        // artifacts) from firing on text a human plainly sees.
         let coverage = rules::token_coverage(&span.text, ocr_tokens);
-        let missing_from_visual = coverage < MISSING_TOKEN_COVERAGE;
+        let tokens_present = coverage >= MISSING_TOKEN_COVERAGE;
+        let bbox_has_visible_text =
+            span_bbox_intersects_ocr(span, media_box, self.options.dpi, ocr_lines_px);
+        // Off-canvas spans can never be visible.
+        let visually_present = !span.off_page && tokens_present && bbox_has_visible_text;
+        let missing_from_visual = !visually_present;
 
-        if style_hidden || (missing_from_visual && signature_hit.is_some()) {
+        // Content gate: single glyphs, control-character runs and bare
+        // numbers placed off-canvas (stray text objects from embedded
+        // figures) cannot carry an injection payload; don't report them.
+        // A real payload always contains at least one alphabetic word, and
+        // never contains control characters (those indicate a UTF-16 string
+        // misdecoded as Latin-1 — a producer artifact, not an attack).
+        let tokens = rules::normalize_tokens(&span.text);
+        let has_payload_content = tokens.len() >= 2
+            && tokens
+                .iter()
+                .any(|t| t.len() >= 3 && t.chars().any(|c| c.is_alphabetic()))
+            && !span.text.chars().any(|c| c.is_control());
+
+        if (style_hidden || signature_hit.is_some()) && missing_from_visual && has_payload_content {
             let mut all_reasons = reasons;
             if missing_from_visual {
                 all_reasons.push(
@@ -270,10 +307,13 @@ impl Sanitizer {
                 },
                 quarantined_snippet: Some(snippet_of(&span.text, 200)),
             });
-        } else if missing_from_visual {
+        } else if !tokens_present && is_latin_prose(&span.text) {
             // Present in the raw stream, styled normally, but OCR could not
-            // reproduce it. Usually an OCR artifact; surfaced at low severity
-            // so pipelines can filter it out without losing true positives.
+            // reproduce it. Usually an OCR artifact on equations/symbols;
+            // surfaced at low severity so pipelines can filter it out
+            // without losing true positives. Only spans that look like
+            // real Latin prose (>= 3 tokens) are reported — single symbols
+            // and math glyphs are inherently unOCRable noise.
             findings.push(Finding {
                 id: String::new(),
                 severity: Severity::Low,
@@ -293,9 +333,9 @@ impl Sanitizer {
             });
         }
 
-        // Visible spans are still scanned for signatures (they reach the
-        // Markdown output, so consumers must be warned).
-        if !style_hidden {
+        // Spans confirmed visible are still scanned for signatures (they
+        // reach the Markdown output, so consumers must be warned).
+        if visually_present {
             for hit in hits {
                 findings.push(hit_to_finding(
                     hit,
@@ -503,9 +543,16 @@ fn push_unicode_findings(text: &str, location: Location, findings: &mut Vec<Find
         .collect();
     classes.sort_unstable();
     classes.dedup();
+    // A lone byte-order mark is a common producer artifact (e.g. pdfTeX
+    // metadata) — keep it at low severity. Anything else stays medium.
+    let only_bom = invisible.iter().all(|(_, c)| *c == '\u{FEFF}');
     findings.push(Finding {
         id: String::new(),
-        severity: Severity::Medium,
+        severity: if only_bom {
+            Severity::Low
+        } else {
+            Severity::Medium
+        },
         category: Category::SuspiciousUnicode,
         reason: format!(
             "invisible Unicode present: {} ({} occurrence(s)); stripped from output",
@@ -526,6 +573,52 @@ fn push_unicode_findings(text: &str, location: Location, findings: &mut Vec<Find
 
 fn luminance(rgb: [f64; 3]) -> f64 {
     0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+}
+
+/// True when OCR-recognized text (pixel-space line boxes) intersects the
+/// span's own bounding box — i.e. a human sees text right there.
+fn span_bbox_intersects_ocr(
+    span: &RawSpan,
+    media_box: [f64; 4],
+    dpi: f64,
+    ocr_lines_px: &[[f64; 4]],
+) -> bool {
+    if ocr_lines_px.is_empty() {
+        return false;
+    }
+    let s = dpi / 72.0;
+    let pad = (span.font_size * s).max(4.0) * 1.5;
+    let sx0 = (span.bbox_pt[0] - media_box[0]) * s - pad;
+    let sx1 = (span.bbox_pt[2] - media_box[0]) * s + pad;
+    let sy0 = (media_box[3] - span.bbox_pt[3]) * s - pad;
+    let sy1 = (media_box[3] - span.bbox_pt[1]) * s + pad;
+    ocr_lines_px
+        .iter()
+        .any(|l| sx0 <= l[2] && l[0] <= sx1 && sy0 <= l[3] && l[1] <= sy1)
+}
+
+/// Heuristic "is this ordinary Latin prose worth reporting as an OCR
+/// mismatch" — filters math glyph runs and single symbols, which the Latin
+/// OCR models cannot read by design.
+fn is_latin_prose(text: &str) -> bool {
+    let tokens = rules::normalize_tokens(text);
+    if tokens.len() < 3 {
+        return false;
+    }
+    if !tokens.iter().any(|t| t.len() >= 3) {
+        return false;
+    }
+    let total = text.chars().count();
+    if total == 0 {
+        return false;
+    }
+    let ascii = text
+        .chars()
+        .filter(|c| {
+            c.is_ascii_alphanumeric() || c.is_ascii_whitespace() || c.is_ascii_punctuation()
+        })
+        .count();
+    (ascii as f64 / total as f64) >= 0.5
 }
 
 fn contrast(a: [f64; 3], b: [f64; 3]) -> f64 {

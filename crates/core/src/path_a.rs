@@ -324,7 +324,7 @@ fn interpret_content(
     let mut tlm = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
     let mut leading = 0.0;
 
-    let mut pending_rect_fill = false;
+    let mut pending_rect: Option<[f64; 4]> = None;
 
     let page_w = media_box[2] - media_box[0];
     let page_h = media_box[3] - media_box[1];
@@ -513,11 +513,28 @@ fn interpret_content(
                     _ => {}
                 }
             }
-            "re" => pending_rect_fill = true,
-            "f" | "f*" | "B" | "B*" | "b" | "b*" if pending_rect_fill => {
-                // A filled rectangle becomes the approximate page background.
-                gs.bg = gs.fill;
-                pending_rect_fill = false;
+            "re" => {
+                let nums: Vec<f64> = op.operands.iter().filter_map(number_of).collect();
+                pending_rect = if nums.len() == 4 {
+                    Some([nums[0], nums[1], nums[2], nums[3]])
+                } else {
+                    None
+                };
+            }
+            "f" | "f*" | "B" | "B*" | "b" | "b*" => {
+                // Only a filled rectangle covering most of the page counts as
+                // a background paint; small filled shapes (plot markers,
+                // boxes, rules) must not change the page background, or all
+                // subsequent text would be falsely "zero contrast".
+                if let Some([x, y, w, h]) = pending_rect {
+                    let covers_page = w * h >= 0.5 * page_w * page_h
+                        && x <= media_box[0] + 1.0
+                        && y <= media_box[1] + 1.0;
+                    if covers_page {
+                        gs.bg = gs.fill;
+                    }
+                }
+                pending_rect = None;
             }
             _ => {}
         }
